@@ -84,8 +84,10 @@ if givenUrl and add_sidebar:
             messages=messages,
         )
         output_text = ""
+        
         # Iterate over each chunk/message
-        for event in stream.get_events():
+        while not stream_manager.is_finished():
+            event = stream_manager.receive()  
             if event.type == "response.output_text.delta":
                 output_text += event.delta
                 st.write(output_text, unsafe_allow_html=True)
