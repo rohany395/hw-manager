@@ -63,16 +63,24 @@ if givenUrl and add_sidebar:
 
     # Process the uploaded file and question.
     document = read_url_content(givenUrl)
-    messages = [
-        {
-            "role": "system",
-            "content": f"You are a helpful assistant that always replies in {languageChoice}."
-        },
-        {
-            "role": "user",
-            "content": f"Here's a document: {document} \n\n---\n\n {add_sidebar}",
-        }
-    ]
+    if modelSelected=="Claude":
+        messages = [
+            {
+                "role": "user",
+                "content": f"Here's a document: {document} \n\n---\n\n {add_sidebar}",
+            }
+        ]
+    else:
+        messages = [
+            {
+                "role": "system",
+                "content": f"You are a helpful assistant that always replies in {languageChoice}."
+            },
+            {
+                "role": "user",
+                "content": f"Here's a document: {document} \n\n---\n\n {add_sidebar}",
+            }
+        ]
 
     # Generate an answer using the OpenAI API.
     
@@ -82,6 +90,7 @@ if givenUrl and add_sidebar:
             with client.messages.stream(
                 model=gptVersion,
                 max_tokens=1024,
+                system=f"You are a helpful assistant that always replies in {languageChoice}.",
                 messages=messages,
             ) as stream:
                 for text in stream.text_stream:
