@@ -30,7 +30,7 @@ if modelSelected =="Gemini":
 elif modelSelected =="Chatgpt":
     client = OpenAI(api_key=st.secrets["API_KEY"])
 elif modelSelected =="Claude":
-    client = anthropic.Anthropic(api_key=st.secrets["CLAUDE_key"])
+    client = anthropic.Anthropic(api_key=st.secrets["CLAUDE_KEY"])
 
 givenUrl = st.text_area(
     "Upload a URL that you want to summarize",
