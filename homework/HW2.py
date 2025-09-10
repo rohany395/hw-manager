@@ -78,18 +78,15 @@ if givenUrl and add_sidebar:
     
 
     if modelSelected == "Claude":
-        stream = client.messages.stream(
-            model=gptVersion,
-            max_tokens=500,
-            messages=messages,
-        )
-        
-        for event in stream:
-            if event.type == "content_block_delta":
-                if hasattr(event.delta, 'text'):
-                    output_text += event.delta.text
-                    #print(event.delta.text, end="", flush=True)
-                st.write_stream(event.delta.text, unsafe_allow_html=True)
+        def generate_response():
+            with client.messages.stream(
+                model=gptVersion,
+                max_tokens=1024,
+                messages=messages,
+            ) as stream:
+                for text in stream.text_stream:
+                    yield text
+        st.write_stream(generate_response())
     else:
         stream = client.chat.completions.create(
             model=gptVersion,
@@ -97,5 +94,5 @@ if givenUrl and add_sidebar:
             stream=True,
         )
 
-    # Stream the response to the app using `st.write_stream`.
-    st.write_stream(stream)
+        # Stream the response to the app using `st.write_stream`.
+        st.write_stream(stream)
