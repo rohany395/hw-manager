@@ -83,6 +83,12 @@ if givenUrl and add_sidebar:
             max_tokens=500,
             messages=messages,
         )
+        output_text = ""
+        # Iterate over each chunk/message
+        for event in stream:
+            if event.type == "response.output_text.delta":
+                output_text += event.delta
+                st.write(output_text, unsafe_allow_html=True)
     else:
         stream = client.chat.completions.create(
             model=gptVersion,
