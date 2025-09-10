@@ -55,7 +55,7 @@ elif modelVersion=="Mini" and modelSelected=="Gemini":
 elif modelVersion=="Advanced Model" and modelSelected=="Gemini":
     gptVersion="gemini-2.5-pro"
 elif modelVersion=="Mini" and modelSelected=="Claude":
-    gptVersion="claude-3-5-sonnet-20240620"
+    gptVersion="claude-3-5-haiku-20240620"
 elif modelVersion=="Advanced Model" and modelSelected=="Claude":
     gptVersion="claude-3-5-sonnet-20240620"
 
@@ -79,7 +79,7 @@ if givenUrl and add_sidebar:
 
     if modelSelected == "Claude":
         stream = client.messages.stream(
-            model=gptVersion,   # e.g., "claude-3-5-sonnet-20240620"
+            model=gptVersion,
             max_tokens=500,
             messages=messages,
         )
