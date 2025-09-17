@@ -35,9 +35,9 @@ if modelVersion=="Mini" and modelSelected=="Chatgpt":
 elif modelVersion=="Advanced Model" and modelSelected=="Chatgpt":
     gptVersion="gpt-4o"
 elif modelVersion=="Mini" and modelSelected=="Gemini":
-    gptVersion="gemini-1.5-flash"
+    gptVersion="gemini-1.5-flash-latest"
 elif modelVersion=="Advanced Model" and modelSelected=="Gemini":
-    gptVersion="gemini-1.5-pro"
+    gptVersion="gemini-1.5-pro-latest"
 elif modelVersion=="Mini" and modelSelected=="Claude":
     gptVersion="claude-3-5-haiku-20241022"
 elif modelVersion=="Advanced Model" and modelSelected=="Claude":
