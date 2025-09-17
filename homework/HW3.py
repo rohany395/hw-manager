@@ -10,16 +10,12 @@ st.title("📄 Rohan's Chatbot")
 #sidebar
 url1=url1=st.sidebar.text_area("Upload your first url",placeholder="www.xyz.com")
 url2=st.sidebar.text_area("Upload your second url (optional)",placeholder="www.xyz.com")
-add_sidebar=st.sidebar.selectbox(
-    "Summary options",
-    ("Summarize the document in 100 words",
-     "Summarize the document in 2 connecting paragraphs",
-     "Summarize the document in 5 bullet points"
-     )
-)
-modelSelected=add_sidebar=st.sidebar.selectbox("Summary options",("Gemini","Chatgpt","Claude"))
+
+modelSelected=st.sidebar.selectbox("Select a service",("Gemini","Chatgpt","Claude"))
 
 def read_url_content(url):
+    if not url or not url.strip():
+        return None
     try:
         response = requests.get(url)
         response.raise_for_status() # Raise an exception for HTTP errors
@@ -28,8 +24,6 @@ def read_url_content(url):
     except requests.RequestException as e:
         print(f"Error reading {url}: {e}")
         return None
-document1 = read_url_content(url1)
-document2 = read_url_content(url2)
 
 
 #checkbox
@@ -41,9 +35,9 @@ if modelVersion=="Mini" and modelSelected=="Chatgpt":
 elif modelVersion=="Advanced Model" and modelSelected=="Chatgpt":
     gptVersion="gpt-4o"
 elif modelVersion=="Mini" and modelSelected=="Gemini":
-    gptVersion="gemini-2.5-flash"
+    gptVersion="gemini-1.5-flash"
 elif modelVersion=="Advanced Model" and modelSelected=="Gemini":
-    gptVersion="gemini-2.5-pro"
+    gptVersion="gemini-1.5-pro"
 elif modelVersion=="Mini" and modelSelected=="Claude":
     gptVersion="claude-3-5-haiku-20241022"
 elif modelVersion=="Advanced Model" and modelSelected=="Claude":
@@ -63,6 +57,9 @@ if 'client' not in st.session_state:
 if 'messages' not in st.session_state:
     st.session_state['messages']=[{'role':'assistant','content':'Hi how can I help?'}]
 
+
+document1 = read_url_content(url1)
+document2 = read_url_content(url2)
 #chat input
 if prompt:=st.chat_input('Talk to me Goose'):
     if memory_type == "Buffer of 6 questions" and len(st.session_state.messages) > 12:
@@ -73,11 +70,17 @@ if prompt:=st.chat_input('Talk to me Goose'):
             st.session_state.messages.pop(0)
 
     # Append user message
-    st.session_state.messages.append({'role':'user','content':f'{prompt} first document is the following {document1} and second document is the following {document2}'})
+    content = prompt
+    if document1:
+        content += f" First document is the following: {document1}"
+    if document2:
+        content += f" Second document is the following: {document2}"
+    st.session_state.messages.append({'role':'user','content':content})
 
 for msg in st.session_state.messages:
     chat_msg=st.chat_message(msg['role'])
     chat_msg.write(msg['content'])
+
 
 
 if modelSelected =="Gemini":
@@ -103,10 +106,9 @@ if modelSelected == "Claude":
             ) as stream:
                 for text in stream.text_stream:
                     yield text
-        st.write_stream(generate_response())
 
         with st.chat_message('assistant'):
-            response=st.write_stream(stream)
+            response=st.write_stream(generate_response())
 
         st.session_state.messages.append({'role':'assistant','content':f'{response}'})
 else:
@@ -122,6 +124,5 @@ else:
             response=st.write_stream(stream)
 
         st.session_state.messages.append({'role':'assistant','content':f'{response}'})
-print(st.session_state.messages,'kkk')
 
     
