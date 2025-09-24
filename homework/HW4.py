@@ -88,7 +88,6 @@ if prompt:
 
     retrieved_context = "\n\n".join(results['documents'][0])
 
-    # 3️⃣ Build prompt for OpenAI using user question + retrieved context
     augmented_prompt = (
         f"Use the following context to answer the question accurately.\n\n"
         f"Context:\n{retrieved_context}\n\n"
