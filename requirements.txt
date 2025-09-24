@@ -1,6 +1,4 @@
 streamlit
-pathlib
-sys
 openai
 PyPDF2
 requests
@@ -9,5 +7,4 @@ anthropic
 google-generativeai
 chromadb
 pysqlite3-binary
-PyPDF2
 protobuf==3.20
