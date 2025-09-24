@@ -4,3 +4,8 @@ PyPDF2
 requests
 bs4
 anthropic
+google-generativeai
+chromadb
+pysqlite3-binary
+PyPDF2
+protobuf==3.20

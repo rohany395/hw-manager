@@ -3,6 +3,7 @@ from openai import OpenAI
 import requests
 import bs4
 import anthropic
+import google.generativeai as genai
 
 # Show title and description.
 st.title("📄 Rohan's Chatbot")
@@ -57,6 +58,25 @@ if 'client' not in st.session_state:
 if 'messages' not in st.session_state:
     st.session_state['messages']=[{'role':'assistant','content':'Hi how can I help?'}]
 
+if modelSelected =="Gemini":
+    genai.configure(api_key=st.secrets["GEMINI_KEY"])
+    client = genai.GenerativeModel(gptVersion)
+elif modelSelected =="Chatgpt":
+    client = OpenAI(api_key=st.secrets["API_KEY"])
+elif modelSelected =="Claude":
+    client = anthropic.Anthropic(api_key=st.secrets["CLAUDE_KEY"])
+
+
+
+def convert_messages_for_gemini(messages):
+    gemini_messages = []
+    for msg in messages:
+        if msg['role'] == 'user':
+            gemini_messages.append({'role': 'user', 'parts': [msg['content']]})
+        elif msg['role'] == 'assistant':
+            gemini_messages.append({'role': 'model', 'parts': [msg['content']]})
+    return gemini_messages
+
 
 document1 = read_url_content(url1)
 document2 = read_url_content(url2)
@@ -80,23 +100,34 @@ if prompt:=st.chat_input('Talk to me Goose'):
 for msg in st.session_state.messages:
     chat_msg=st.chat_message(msg['role'])
     chat_msg.write(msg['content'])
-
-
-
-if modelSelected =="Gemini":
-    client = OpenAI(
-        api_key=st.secrets["GEMINI_KEY"],
-        base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
-    )
-elif modelSelected =="Chatgpt":
-    client = OpenAI(api_key=st.secrets["API_KEY"])
-elif modelSelected =="Claude":
-    client = anthropic.Anthropic(api_key=st.secrets["CLAUDE_KEY"])
     
 
 # Generate an answer using the OpenAI API.
 
-if modelSelected == "Claude":
+if modelSelected == "Gemini":
+    # Method 1: Using Google's official generativeai library
+    def generate_gemini_response():
+        try:
+            # Convert messages to Gemini format
+            gemini_messages = convert_messages_for_gemini(st.session_state.messages[:-1])
+            
+            # Start a chat session
+            chat = client.start_chat(history=gemini_messages)
+            
+            response = chat.send_message(content, stream=True)
+            for chunk in response:
+                if chunk.text:
+                    yield chunk.text
+                    
+        except Exception as e:
+            yield f"Error: {str(e)}"
+
+    with st.chat_message('assistant'):
+        response = st.write_stream(generate_gemini_response())
+    
+    st.session_state.messages.append({'role':'assistant','content':response})
+
+elif modelSelected == "Claude":
         def generate_response():
             with client.messages.stream(
                 model=gptVersion,
