@@ -1,4 +1,6 @@
 streamlit
+pathlib
+sys
 openai
 PyPDF2
 requests

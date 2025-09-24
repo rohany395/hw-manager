@@ -1,7 +1,6 @@
 import streamlit as st
 from openai import OpenAI
 from pathlib import Path
-from PyPDF2 import PdfReader
 import sys 
 import pysqlite3
 sys.modules['sqlite3']=pysqlite3
