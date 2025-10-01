@@ -38,7 +38,6 @@ def add_to_collection(collection, text, filename):
         embeddings=[embedding]
     )
 
-# Load PDFs into collection
 if 'pdfs_loaded' not in st.session_state:
     pdf_dir = Path("pdfFiles")
     if pdf_dir.exists():
@@ -114,7 +113,6 @@ if prompt := st.chat_input('Ask me about the courses'):
         Please provide a clear, concise answer based on this information."""
     }
     
-    # Prepare messages for API call (system message + conversation history)
     api_messages = [system_message] + st.session_state.messages
     
     # Generate response using OpenAI API with vector search results
@@ -122,7 +120,7 @@ if prompt := st.chat_input('Ask me about the courses'):
         openai_client = st.session_state.openai_client
         
         stream = openai_client.chat.completions.create(
-            model="gpt-4o-mini",  # or "gpt-3.5-turbo"
+            model="gpt-4o-mini",
             messages=api_messages,
             stream=True,
         )
@@ -131,16 +129,3 @@ if prompt := st.chat_input('Ask me about the courses'):
     
     # Append assistant response to messages
     st.session_state.messages.append({'role': 'assistant', 'content': response})
-
-# Sidebar with additional info
-with st.sidebar:
-    st.header("ℹ️ Information")
-    st.write(f"**Messages in memory:** {len(st.session_state.messages)}")
-    st.write(f"**Documents loaded:** {collection.count()}")
-    
-    if st.button("Clear Chat History"):
-        st.session_state.messages = [{'role': 'assistant', 'content': 'Hi! How can I help you with course information?'}]
-        st.rerun()
-    
-    st.divider()
-    st.caption("💡 Ask questions about your course documents!")
