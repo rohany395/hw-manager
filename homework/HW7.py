@@ -48,15 +48,6 @@ if collection.count() == 0:
         metadatas=metadatas
     )
 
-# results = collection.query(
-#     query_texts=["jp mprgan zelle"],
-#     n_results=1
-# )
-
-# print("\n📰 Top 3 results for 'corporate law':")
-# for i, meta in enumerate(results['metadatas'][0]):
-#     print(f"{i+1}. {meta['URL']}")
-
 
 # Initialize OpenAI client
 if 'openai_client' not in st.session_state:
@@ -82,7 +73,7 @@ def search_news(query, n_results=3):
         query_texts=[query],
         n_results=n_results
     )
-    
+    print(results,'end')
     articles = []
     for i in range(len(results['ids'][0])):
         newsText=read_url_content(results['metadatas'][0][i]['URL'])
@@ -124,19 +115,17 @@ tools = [
 
 # Chat input
 if prompt := st.chat_input("Ask about news..."):
-    # Add user message to chat
     st.session_state.messages.append({'role': 'user', 'content': prompt})
     
     with st.chat_message('user'):
         st.markdown(prompt)
     
-    # Get AI response with function calling
     with st.chat_message('assistant'):
         message_placeholder = st.empty()
         
         # Call OpenAI with function calling
         response = st.session_state.openai_client.chat.completions.create(
-            model="gpt-4o-mini",  # or "gpt-4o" for better quality
+            model="gpt-4o-mini",
             messages=st.session_state.messages,
             tools=tools,
             tool_choice="auto"
@@ -145,7 +134,6 @@ if prompt := st.chat_input("Ask about news..."):
         response_message = response.choices[0].message
         tool_calls = response_message.tool_calls
         
-        # Check if the model wants to call a function
         if tool_calls:
             # Add assistant's tool call message
             st.session_state.messages.append({
@@ -163,12 +151,10 @@ if prompt := st.chat_input("Ask about news..."):
                 ]
             })
             
-            # Execute each function call
             for tool_call in tool_calls:
                 function_name = tool_call.function.name
                 function_args = json.loads(tool_call.function.arguments)
                 
-                # Call the appropriate function
                 if function_name == "search_news":
                     function_response = search_news(**function_args)
                 # elif function_name == "rank_interesting_news":
