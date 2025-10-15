@@ -73,7 +73,7 @@ def search_news(query, n_results=3):
         query_texts=[query],
         n_results=n_results
     )
-    print(results,'end')
+
     articles = []
     for i in range(len(results['ids'][0])):
         newsText=read_url_content(results['metadatas'][0][i]['URL'])
