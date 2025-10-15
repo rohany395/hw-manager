@@ -67,6 +67,43 @@ def read_url_content(url):
     except requests.RequestException as e:
         print(f"Error reading {url}: {e}")
         return None
+    
+def rank_interesting_news(n_results=10):
+    """Get most interesting news for law firms"""
+    legal_keywords = [
+        "litigation", "regulatory", "compliance", "merger", "acquisition",
+        "SEC", "settlement", "lawsuit", "investigation", "enforcement",
+        "antitrust", "securities", "fraud"
+    ]
+    
+    all_results = []
+    
+    for keyword in legal_keywords:
+        results = collection.query(
+            query_texts=[keyword],
+            n_results=3
+        )
+        
+        for i in range(len(results['ids'][0])):
+            all_results.append({
+                "id": results['ids'][0][i],
+                "title": results['metadatas'][0][i]['title'],
+                "url": results['metadatas'][0][i]['url'],
+                "company": results['metadatas'][0][i]['company'],
+                "date": results['metadatas'][0][i]['date'],
+                "relevance_score": round(1 - results['distances'][0][i], 3),
+                "matched_keyword": keyword
+            })
+    
+    # Remove duplicates, sort by relevance
+    seen_ids = set()
+    unique_results = []
+    for result in sorted(all_results, key=lambda x: x['relevance_score'], reverse=True):
+        if result['id'] not in seen_ids:
+            seen_ids.add(result['id'])
+            unique_results.append(result)
+    
+    return unique_results[:n_results]
 
 def search_news(query, n_results=3):
     results = collection.query(
@@ -126,18 +163,35 @@ tools = [
             }
         }
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "rank_interesting_news",
+            "description": "Get the most legally interesting/important news. Use when user asks for 'interesting', 'important', or 'top' news in general.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "n_results": {
+                        "type": "integer",
+                        "description": "Number of top items (default 10)",
+                        "default": 10
+                    }
+                },
+                "required": []
+            }
+        }
+    },
 ]
 
 SYSTEM_PROMPT  = """You are a news assistant for a global law firm. You help lawyers find and understand relevant news.
 
 When answering questions:
 1. Always base answers on the news articles provided
-2. Prioritize news about: litigation, regulation, M&A, compliance, SEC actions
-3. Provide article titles, companies, and URLs
-4. Be concise and professional
-5. If asked about interesting news, focus on legal implications
+2. Provide article titles, companies, and URLs
+3. Be concise and professional
+4. If asked about interesting news, focus on legal implications
 
-You have access to functions to search url of articles. Use them appropriately."""
+You have access to functions to search url of articles and find interesting news in general. Use them appropriately."""
 
 
 for message in st.session_state.messages:
@@ -198,8 +252,8 @@ if prompt := st.chat_input("Ask about news..."):
                 
                 if function_name == "search_news":
                     function_response = search_news(**function_args)
-                # elif function_name == "rank_interesting_news":
-                #     function_response = rank_interesting_news(**function_args)
+                elif function_name == "rank_interesting_news":
+                    function_response = rank_interesting_news(**function_args)
                 
                 # Add function response to messages
                 st.session_state.messages.append({
