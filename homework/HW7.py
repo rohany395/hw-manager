@@ -2,6 +2,7 @@ __import__('pysqlite3')
 import sys 
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import streamlit as st
+import google.generativeai as genai
 from openai import OpenAI
 import chromadb
 import pandas as pd
@@ -9,6 +10,9 @@ from chromadb.utils import embedding_functions
 import json
 import bs4
 import requests
+
+st.title("📄 Rohan's News bot")
+model_choice=st.sidebar.selectbox("Select a service",("Gemini","Chatgpt"))
 
 df = pd.read_csv('./excelFile/Example_news_info_for_testing.csv')
 
@@ -183,6 +187,176 @@ tools = [
     },
 ]
 
+gemini_tools = [
+    genai.protos.Tool(
+        function_declarations=[
+            genai.protos.FunctionDeclaration(
+                name="search_news",
+                description="Search for news articles about a specific topic or company.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The search query"
+                        },
+                        "n_results": {
+                            "type": "integer",
+                            "description": "Number of results (default 5)"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            ),
+            genai.protos.FunctionDeclaration(
+                name="rank_interesting_news",
+                description="Get the most legally interesting news.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "n_results": {
+                            "type": "integer",
+                            "description": "Number of results (default 10)"
+                        }
+                    }
+                }
+            )
+        ]
+    )
+]
+
+def convert_messages_for_gemini(messages):
+    """Convert shared message format to Gemini format"""
+    gemini_history = []
+    for msg in messages:
+        if msg['role'] == 'system':
+            continue  # Gemini uses system_instruction instead
+        elif msg['role'] == 'user':
+            gemini_history.append({
+                'role': 'user',
+                'parts': [msg['content']]
+            })
+        elif msg['role'] == 'assistant':
+            gemini_history.append({
+                'role': 'model',
+                'parts': [msg['content']]
+            })
+    return gemini_history
+
+def call_openai(messages):
+    """Call OpenAI with function calling"""
+    response = st.session_state.openai_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages,
+        tools=openai_tools,
+        tool_choice="auto",
+        temperature=0.7
+    )
+    
+    response_message = response.choices[0].message
+    tool_calls = response_message.tool_calls
+    
+    if tool_calls:
+        # Add assistant's tool call message
+        messages.append({
+            'role': 'assistant',
+            'content': response_message.content,
+            'tool_calls': [
+                {
+                    'id': tc.id,
+                    'type': tc.type,
+                    'function': {
+                        'name': tc.function.name,
+                        'arguments': tc.function.arguments
+                    }
+                } for tc in tool_calls
+            ]
+        })
+        
+        # Execute functions
+        for tool_call in tool_calls:
+            function_name = tool_call.function.name
+            function_args = json.loads(tool_call.function.arguments)
+            
+            if function_name == "search_news":
+                function_response = search_news(**function_args)
+            elif function_name == "rank_interesting_news":
+                function_response = rank_interesting_news(**function_args)
+            
+            messages.append({
+                'role': 'tool',
+                'tool_call_id': tool_call.id,
+                'name': function_name,
+                'content': json.dumps(function_response)
+            })
+        
+        # Get final response
+        second_response = st.session_state.openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages
+        )
+        return second_response.choices[0].message.content
+    else:
+        return response_message.content
+    
+def call_gemini(messages):
+    """Call Gemini with function calling"""
+    # Convert messages to Gemini format
+    gemini_history = []
+    for msg in messages:
+        if msg['role'] == 'system':
+            continue  # Gemini doesn't have system role, we'll prepend to first user message
+        elif msg['role'] == 'user':
+            gemini_history.append({
+                'role': 'user',
+                'parts': [msg['content']]
+            })
+        elif msg['role'] == 'assistant':
+            gemini_history.append({
+                'role': 'model',
+                'parts': [msg['content']]
+            })
+    
+    # Create model with tools
+    model = genai.GenerativeModel(
+        model_name='gemini-1.5-flash',
+        tools=gemini_tools,
+        system_instruction=SYSTEM_PROMPT
+    )
+    
+    # Start chat with history
+    chat = model.start_chat(history=gemini_history[:-1] if gemini_history else [])
+    
+    # Send last message
+    last_message = gemini_history[-1]['parts'][0] if gemini_history else ""
+    response = chat.send_message(last_message)
+    
+    # Handle function calls
+    if response.candidates[0].content.parts[0].function_call:
+        function_call = response.candidates[0].content.parts[0].function_call
+        function_name = function_call.name
+        function_args = dict(function_call.args)
+        
+        # Execute function
+        if function_name == "search_news":
+            function_response = search_news(**function_args)
+        elif function_name == "rank_interesting_news":
+            function_response = rank_interesting_news(**function_args)
+        
+        # Send function response back
+        response = chat.send_message(
+            genai.protos.Content(
+                parts=[genai.protos.Part(
+                    function_response=genai.protos.FunctionResponse(
+                        name=function_name,
+                        response={'result': function_response}
+                    )
+                )]
+            )
+        )
+    
+    return response.text
+
 SYSTEM_PROMPT  = """You are a news assistant for a global law firm. You help lawyers find and understand relevant news.
 
 When answering questions:
@@ -193,6 +367,10 @@ When answering questions:
 
 You have access to functions to search url of articles and find interesting news in general. Use them appropriately."""
 
+
+if model_choice != st.session_state.selected_model:
+        st.session_state.selected_model = model_choice
+        st.rerun()
 
 for message in st.session_state.messages:
     with st.chat_message(message['role']):
@@ -216,63 +394,106 @@ if prompt := st.chat_input("Ask about news..."):
     
     with st.chat_message('assistant'):
         message_placeholder = st.empty()
-        
-        # Call OpenAI with function calling
-        response = st.session_state.openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=st.session_state.messages,
-            tools=tools,
-            tool_choice="auto"
-        )
-        
-        response_message = response.choices[0].message
-        tool_calls = response_message.tool_calls
-        print(tool_calls,'tool_calls')
-        
-        if tool_calls:
-            # Add assistant's tool call message
-            st.session_state.messages.append({
-                'role': 'assistant',
-                'content': response_message.content,
-                'tool_calls': [
-                    {
-                        'id': tc.id,
-                        'type': tc.type,
-                        'function': {
-                            'name': tc.function.name,
-                            'arguments': tc.function.arguments
-                        }
-                    } for tc in tool_calls
-                ]
-            })
+
+        if model_choice == "Chatgpt":
+            # Call OpenAI with function calling
+            response = st.session_state.openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=st.session_state.messages,
+                tools=tools,
+                tool_choice="auto"
+            )
             
-            for tool_call in tool_calls:
-                function_name = tool_call.function.name
-                function_args = json.loads(tool_call.function.arguments)
+            response_message = response.choices[0].message
+            tool_calls = response_message.tool_calls
+            print(tool_calls,'tool_calls')
+            
+            if tool_calls:
+                # Add assistant's tool call message
+                st.session_state.messages.append({
+                    'role': 'assistant',
+                    'content': response_message.content,
+                    'tool_calls': [
+                        {
+                            'id': tc.id,
+                            'type': tc.type,
+                            'function': {
+                                'name': tc.function.name,
+                                'arguments': tc.function.arguments
+                            }
+                        } for tc in tool_calls
+                    ]
+                })
                 
+                for tool_call in tool_calls:
+                    function_name = tool_call.function.name
+                    function_args = json.loads(tool_call.function.arguments)
+                    
+                    if function_name == "search_news":
+                        function_response = search_news(**function_args)
+                    elif function_name == "rank_interesting_news":
+                        function_response = rank_interesting_news(**function_args)
+                    
+                    # Add function response to messages
+                    st.session_state.messages.append({
+                        'role': 'tool',
+                        'tool_call_id': tool_call.id,
+                        'name': function_name,
+                        'content': json.dumps(function_response)
+                    })
+                
+                # Get final response from model with function results
+                second_response = st.session_state.openai_client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=st.session_state.messages
+                )
+                
+                final_message = second_response.choices[0].message.content
+            else:
+                final_message = response_message.content
+        else:
+            gemini_history = convert_messages_for_gemini(st.session_state.messages)
+    
+            # Create model with tools
+            model = genai.GenerativeModel(
+                model_name='gemini-1.5-flash',
+                tools=gemini_tools,
+                system_instruction=SYSTEM_PROMPT
+            )
+            
+            chat = model.start_chat(history=gemini_history[:-1] if gemini_history else [])
+            
+            # Send last message
+            last_message = gemini_history[-1]['parts'][0] if gemini_history else ""
+            response = chat.send_message(last_message)
+            
+            # Handle function calls
+            if response.candidates[0].content.parts[0].function_call:
+                function_call = response.candidates[0].content.parts[0].function_call
+                function_name = function_call.name
+                function_args = dict(function_call.args)
+                
+                # Execute function
                 if function_name == "search_news":
                     function_response = search_news(**function_args)
                 elif function_name == "rank_interesting_news":
                     function_response = rank_interesting_news(**function_args)
                 
-                # Add function response to messages
-                st.session_state.messages.append({
-                    'role': 'tool',
-                    'tool_call_id': tool_call.id,
-                    'name': function_name,
-                    'content': json.dumps(function_response)
-                })
+                # Send function response back
+                response = chat.send_message(
+                    genai.protos.Content(
+                        parts=[genai.protos.Part(
+                            function_response=genai.protos.FunctionResponse(
+                                name=function_name,
+                                response={'result': function_response}
+                            )
+                        )]
+                    )
+                )
             
-            # Get final response from model with function results
-            second_response = st.session_state.openai_client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=st.session_state.messages
-            )
-            
-            final_message = second_response.choices[0].message.content
-        else:
-            final_message = response_message.content
+            final_message = response.text
         
+
         # Display and save final response
-        message_placeholder.markdown(final_message)
+        st.markdown(final_message)
         st.session_state.messages.append({'role': 'assistant', 'content': final_message})
