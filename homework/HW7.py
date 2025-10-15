@@ -7,6 +7,8 @@ import chromadb
 import pandas as pd
 from chromadb.utils import embedding_functions
 import json
+import bs4
+import requests
 
 df = pd.read_csv('./excelFile/Example_news_info_for_testing.csv')
 
@@ -65,6 +67,16 @@ if 'openai_client' not in st.session_state:
 if 'messages' not in st.session_state:
     st.session_state['messages'] = [{'role': 'assistant', 'content': 'Hi! I am your news assistant. How can I help you?'}]
 
+def read_url_content(url):
+    try:
+        response = requests.get(url)
+        response.raise_for_status() # Raise an exception for HTTP errors
+        soup = bs4.BeautifulSoup(response.content, 'html.parser')
+        return soup.get_text()
+    except requests.RequestException as e:
+        print(f"Error reading {url}: {e}")
+        return None
+
 def search_news(query, n_results=3):
     results = collection.query(
         query_texts=[query],
@@ -73,8 +85,10 @@ def search_news(query, n_results=3):
     
     articles = []
     for i in range(len(results['ids'][0])):
+        newsText=read_url_content(results['metadatas'][0][i]['URL'])
         articles.append({
             "title": results['metadatas'][0][i]['title'],
+            "content": newsText,
             "URL": results['metadatas'][0][i]['URL'],
             "company": results['metadatas'][0][i]['company'],
             "date": results['metadatas'][0][i]['date'],
