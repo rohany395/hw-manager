@@ -99,7 +99,7 @@ def get_context(query, n_results=3):
         context += f"{i+1}. **{results['metadatas'][0][i]['title']}**\n"
         context += f"   Company: {results['metadatas'][0][i]['company']}\n"
         context += f"   Date: {results['metadatas'][0][i]['date']}\n"
-        context += f"   URL: {results['metadatas'][0][i]['url']}\n\n"
+        context += f"   URL: {results['metadatas'][0][i]['URL']}\n\n"
     
     return context
 
