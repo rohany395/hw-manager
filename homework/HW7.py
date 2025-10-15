@@ -348,7 +348,7 @@ if prompt := st.chat_input("Ask about news..."):
     
             # Create model with tools
             model = genai.GenerativeModel(
-                model_name='gemini-1.5-flash',
+                model_name='models/gemini-1.5-flash',
                 tools=gemini_tools,
                 system_instruction=SYSTEM_PROMPT
             )
