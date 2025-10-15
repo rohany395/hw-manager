@@ -88,6 +88,21 @@ def search_news(query, n_results=3):
     
     return articles
 
+def get_context(query, n_results=3):
+    results = collection.query(
+        query_texts=[query],
+        n_results=n_results
+    )
+    
+    context = "Here are relevant news articles from our database:\n\n"
+    for i in range(len(results['ids'][0])):
+        context += f"{i+1}. **{results['metadatas'][0][i]['title']}**\n"
+        context += f"   Company: {results['metadatas'][0][i]['company']}\n"
+        context += f"   Date: {results['metadatas'][0][i]['date']}\n"
+        context += f"   URL: {results['metadatas'][0][i]['url']}\n\n"
+    
+    return context
+
 tools = [
     {
         "type": "function",
@@ -113,9 +128,34 @@ tools = [
     },
 ]
 
+SYSTEM_PROMPT  = """You are a news assistant for a global law firm. You help lawyers find and understand relevant news.
+
+When answering questions:
+1. Always base answers on the news articles provided
+2. Prioritize news about: litigation, regulation, M&A, compliance, SEC actions
+3. Provide article titles, companies, and URLs
+4. Be concise and professional
+5. If asked about interesting news, focus on legal implications
+
+You have access to functions to search url of articles. Use them appropriately."""
+
+
+for message in st.session_state.messages:
+    with st.chat_message(message['role']):
+        if message['role'] == 'system':
+            continue  # Don't display system messages
+        st.markdown(message['content'])
+
 # Chat input
 if prompt := st.chat_input("Ask about news..."):
-    st.session_state.messages.append({'role': 'user', 'content': prompt})
+
+    relevant_context = get_context(prompt, n_results=3)
+    if len(st.session_state.messages) == 0:
+        st.session_state.messages.append({
+            'role': 'system',
+            'content': SYSTEM_PROMPT
+        })
+    st.session_state.messages.append({'role': 'user', 'content': f"{prompt}\n\n{relevant_context}"})
     
     with st.chat_message('user'):
         st.markdown(prompt)
