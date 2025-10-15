@@ -271,12 +271,12 @@ for message in st.session_state.messages:
         st.markdown(message['content'])
 
 
-genai.configure(api_key=st.secrets["GEMINI_KEY"])
+# genai.configure(api_key=st.secrets["GEMINI_KEY"])
 
-st.write("Available models:")
-for model in genai.list_models():
-    if 'generateContent' in model.supported_generation_methods:
-        st.write(model.name)
+# st.write("Available models:")
+# for model in genai.list_models():
+#     if 'generateContent' in model.supported_generation_methods:
+#         st.write(model.name)
 
 # Chat input
 if prompt := st.chat_input("Ask about news..."):
@@ -356,7 +356,7 @@ if prompt := st.chat_input("Ask about news..."):
     
             # Create model with tools
             model = genai.GenerativeModel(
-                model_name='gemini-pro',
+                model_name='models/gemini-pro-latest',
                 tools=gemini_tools,
                 system_instruction=SYSTEM_PROMPT
             )
