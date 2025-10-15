@@ -270,6 +270,14 @@ for message in st.session_state.messages:
     with st.chat_message(message['role']):
         st.markdown(message['content'])
 
+
+genai.configure(api_key=st.secrets["GEMINI_KEY"])
+
+st.write("Available models:")
+for model in genai.list_models():
+    if 'generateContent' in model.supported_generation_methods:
+        st.write(model.name)
+
 # Chat input
 if prompt := st.chat_input("Ask about news..."):
 
