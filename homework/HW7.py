@@ -74,10 +74,10 @@ def search_news(query, n_results=3):
     articles = []
     for i in range(len(results['ids'][0])):
         articles.append({
-            "title": results['metadatas'][0][i]['Document'],
+            "title": results['metadatas'][0][i]['title'],
             "URL": results['metadatas'][0][i]['URL'],
-            "company": results['metadatas'][0][i]['company_name'],
-            "date": results['metadatas'][0][i]['Date'],
+            "company": results['metadatas'][0][i]['company'],
+            "date": results['metadatas'][0][i]['date'],
             "relevance_score": 1 - results['distances'][0][i]
         })
     
