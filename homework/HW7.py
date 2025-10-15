@@ -58,6 +58,10 @@ if 'openai_client' not in st.session_state:
     openai_api_key = st.secrets["API_KEY"]
     st.session_state.openai_client = OpenAI(api_key=openai_api_key)
 
+if 'gemini_configured' not in st.session_state:
+    genai.configure(api_key=st.secrets["GEMINI_KEY"])
+    st.session_state.gemini_configured = True
+
     # Initialize messages in session state
 if 'messages' not in st.session_state:
     st.session_state['messages'] = [{'role': 'assistant', 'content': 'Hi! I am your news assistant. How can I help you?'}]
@@ -253,15 +257,17 @@ When answering questions:
 
 You have access to functions to search url of articles and find interesting news in general. Use them appropriately."""
 
+if 'selected_model' not in st.session_state:
+    st.session_state.selected_model = "Gemini"
 
 if model_choice != st.session_state.selected_model:
         st.session_state.selected_model = model_choice
         st.rerun()
 
 for message in st.session_state.messages:
+    if message['role'] == 'system':
+            continue
     with st.chat_message(message['role']):
-        if message['role'] == 'system':
-            continue  # Don't display system messages
         st.markdown(message['content'])
 
 # Chat input

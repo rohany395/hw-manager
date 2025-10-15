@@ -8,3 +8,5 @@ google-generativeai
 chromadb
 pysqlite3-binary
 protobuf
+beautifulsoup4
+requests
