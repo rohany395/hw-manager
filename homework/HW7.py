@@ -192,12 +192,12 @@ tools = [
 ]
 
 gemini_tools = [
-    genai.protos.Tool(
-        function_declarations=[
-            genai.protos.FunctionDeclaration(
-                name="search_news",
-                description="Search for news articles about a specific topic or company.",
-                parameters={
+    {
+        "function_declarations": [
+            {
+                "name": "search_news",
+                "description": "Search for news articles about a specific topic or company.",
+                "parameters": {
                     "type": "object",
                     "properties": {
                         "query": {
@@ -206,16 +206,16 @@ gemini_tools = [
                         },
                         "n_results": {
                             "type": "integer",
-                            "description": "Number of results (default 5)"
+                            "description": "Number of results (default 3)"
                         }
                     },
                     "required": ["query"]
                 }
-            ),
-            genai.protos.FunctionDeclaration(
-                name="rank_interesting_news",
-                description="Get the most legally interesting news.",
-                parameters={
+            },
+            {
+                "name": "rank_interesting_news",
+                "description": "Get the most legally interesting news.",
+                "parameters": {
                     "type": "object",
                     "properties": {
                         "n_results": {
@@ -224,9 +224,9 @@ gemini_tools = [
                         }
                     }
                 }
-            )
+            }
         ]
-    )
+    }
 ]
 
 def convert_messages_for_gemini(messages):
