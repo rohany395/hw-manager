@@ -88,7 +88,7 @@ def rank_interesting_news(n_results=10):
             all_results.append({
                 "id": results['ids'][0][i],
                 "title": results['metadatas'][0][i]['title'],
-                "url": results['metadatas'][0][i]['url'],
+                "url": results['metadatas'][0][i]['URL'],
                 "company": results['metadatas'][0][i]['company'],
                 "date": results['metadatas'][0][i]['date'],
                 "relevance_score": round(1 - results['distances'][0][i], 3),
