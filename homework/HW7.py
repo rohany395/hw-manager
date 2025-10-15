@@ -133,6 +133,7 @@ if prompt := st.chat_input("Ask about news..."):
         
         response_message = response.choices[0].message
         tool_calls = response_message.tool_calls
+        print(tool_calls,'tool_calls')
         
         if tool_calls:
             # Add assistant's tool call message
