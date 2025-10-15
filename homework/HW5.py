@@ -7,7 +7,6 @@ import pysqlite3
 sys.modules['sqlite3'] = pysqlite3
 import chromadb
 
-# Show title and description
 st.title("📄 Rohan's Chatbot")
 
 # Initialize ChromaDB
